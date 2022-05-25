@@ -43,14 +43,14 @@ module SyntaxTree
 
           if node.attributes.any?
             q.indent do
-              q.breakable("")
+              q.breakable
               q.seplist(node.attributes, -> { q.breakable }) do |child_node|
                 visit(child_node)
               end
             end
           end
 
-          q.breakable
+          q.breakable("")
           visit(node.closing)
         end
       end
