@@ -2,6 +2,10 @@
 
 module SyntaxTree
   module XML
+    # Provides a visitor interface for visiting certain nodes. It's used
+    # internally to implement formatting and pretty-printing. It could also be
+    # used externally to visit a subset of nodes that are relevant to a certain
+    # task.
     class Visitor
       def visit(node)
         node&.accept(self)
