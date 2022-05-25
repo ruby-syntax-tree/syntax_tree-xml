@@ -23,6 +23,7 @@ GEM
 
 PLATFORMS
   x86_64-darwin-21
+  x86_64-linux
 
 DEPENDENCIES
   bundler
@@ -32,4 +33,4 @@ DEPENDENCIES
   syntax_tree-xml!
 
 BUNDLED WITH
-   2.4.0.dev
+   2.3.6
