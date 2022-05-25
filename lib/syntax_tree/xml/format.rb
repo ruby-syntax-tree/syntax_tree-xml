@@ -226,14 +226,11 @@ module SyntaxTree
 
       # Format a text by splitting nicely at newlines and spaces.
       def format_text(q, value)
-        q.seplist(
-          value.strip.split("\n"),
-          -> { q.breakable(force: true, indent: false) }
-        ) do |line|
-          q.seplist(
-            line.split(/\b(?: +)\b/),
-            -> { q.group { q.breakable } }
-          ) { |segment| q.text(segment) }
+        sep_line = -> { q.breakable(force: true, indent: false) }
+        sep_word = -> { q.group { q.breakable } }
+
+        q.seplist(value.strip.split("\n"), sep_line) do |line|
+          q.seplist(line.split(/\b(?: +)\b/), sep_word) { |word| q.text(word) }
         end
       end
     end
