@@ -3,16 +3,17 @@
 require "prettier_print"
 require "syntax_tree"
 
-require_relative "xml/nodes"
-require_relative "xml/parser"
-require_relative "xml/visitor"
+require_relative "erb/nodes"
+require_relative "erb/parser"
+require_relative "erb/visitor"
 
-require_relative "xml/format"
-require_relative "xml/pretty_print"
+require_relative "erb/format"
+require_relative "erb/pretty_print"
 
 module SyntaxTree
-  module XML
-    def self.format(source, maxwidth = 80)
+  module ERB
+    MAX_WIDTH=80
+    def self.format(source, maxwidth = MAX_WIDTH)
       PrettierPrint.format(+"", maxwidth) { |q| parse(source).format(q) }
     end
 
@@ -25,5 +26,5 @@ module SyntaxTree
     end
   end
 
-  register_handler(".xml", XML)
+  register_handler(".erb", ERB)
 end

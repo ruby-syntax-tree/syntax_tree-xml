@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module SyntaxTree
-  module XML
+  module ERB
     # A Location represents a position for a node in the source file.
     class Location
       attr_reader :start_char, :end_char, :start_line, :end_line
@@ -74,18 +74,16 @@ module SyntaxTree
       end
     end
 
-    # The Document node is the top of the syntax tree. It contains an optional
-    # prolog, an optional doctype declaration, any number of optional
-    # miscellenous elements like comments, whitespace, or processing
-    # instructions, and a root element.
+    # The Document node is the top of the syntax tree.
+    # It contains any number of:
+    # - Text
+    # - HtmlNode
+    # - ErbNodes
     class Document < Node
-      attr_reader :prolog, :miscs, :doctype, :element, :location
+      attr_reader :elements, :location
 
-      def initialize(prolog:, miscs:, doctype:, element:, location:)
-        @prolog = prolog
-        @miscs = miscs
-        @doctype = doctype
-        @element = element
+      def initialize(elements:, location:)
+        @elements = elements
         @location = location
       end
 
@@ -94,120 +92,13 @@ module SyntaxTree
       end
 
       def child_nodes
-        [prolog, *miscs, doctype, element].compact
+        [*elements].compact
       end
 
       alias deconstruct child_nodes
 
       def deconstruct_keys(keys)
-        {
-          prolog: prolog,
-          miscs: miscs,
-          doctype: doctype,
-          element: element,
-          location: location
-        }
-      end
-    end
-
-    # The prolog to the document includes an XML declaration which opens the
-    # tag, any number of attributes, and a closing of the tag.
-    class Prolog < Node
-      attr_reader :opening, :attributes, :closing, :location
-
-      def initialize(opening:, attributes:, closing:, location:)
-        @opening = opening
-        @attributes = attributes
-        @closing = closing
-        @location = location
-      end
-
-      def accept(visitor)
-        visitor.visit_prolog(self)
-      end
-
-      def child_nodes
-        [opening, *attributes, closing]
-      end
-
-      alias deconstruct child_nodes
-
-      def deconstruct_keys(keys)
-        {
-          opening: opening,
-          attributes: attributes,
-          closing: closing,
-          location: location
-        }
-      end
-    end
-
-    # A document type declaration is a special kind of tag that specifies the
-    # type of the document. It contains an opening declaration, the name of
-    # the document type, an optional external identifier, and a closing of the
-    # tag.
-    class DocType < Node
-      attr_reader :opening, :name, :external_id, :closing, :location
-
-      def initialize(opening:, name:, external_id:, closing:, location:)
-        @opening = opening
-        @name = name
-        @external_id = external_id
-        @closing = closing
-        @location = location
-      end
-
-      def accept(visitor)
-        visitor.visit_doctype(self)
-      end
-
-      def child_nodes
-        [opening, name, external_id, closing].compact
-      end
-
-      alias deconstruct child_nodes
-
-      def deconstruct_keys(keys)
-        {
-          opening: opening,
-          name: name,
-          external_id: external_id,
-          closing: closing,
-          location: location
-        }
-      end
-    end
-
-    # An external ID is a child of a document type declaration. It represents
-    # the location where the external identifier is located. It contains a
-    # type (either system or public), an optional public id literal, and the
-    # system literal.
-    class ExternalID < Node
-      attr_reader :type, :public_id, :system_id, :location
-
-      def initialize(type:, public_id:, system_id:, location:)
-        @type = type
-        @public_id = public_id
-        @system_id = system_id
-      end
-
-      def accept(visitor)
-        visitor.visit_external_id(self)
-      end
-
-      def child_nodes
-        [type, public_id, system_id].compact
-      end
-
-      alias deconstruct child_nodes
-
-      def deconstruct_keys(keys)
-        {
-          type: type,
-          public_id: public_id,
-          system_id: system_id,
-          location: location
-        }
+        { elements: elements, location: location }
       end
     end
 
@@ -215,7 +106,7 @@ module SyntaxTree
     # optional content within the tag, and a closing tag. It can also
     # potentially contain an opening tag that self-closes, in which case the
     # content and closing tag will be nil.
-    class Element < Node
+    class HtmlNode < Node
       # The opening tag of an element. It contains the opening character (<),
       # the name of the element, any optional attributes, and the closing
       # token (either > or />).
@@ -288,7 +179,7 @@ module SyntaxTree
       end
 
       def accept(visitor)
-        visitor.visit_element(self)
+        visitor.visit_html(self)
       end
 
       def child_nodes
@@ -307,34 +198,179 @@ module SyntaxTree
       end
     end
 
-    # A Reference is either a character or entity reference. It contains a
-    # single value that is the token it contains.
-    class Reference < Node
-      attr_reader :value, :location
+    class ErbNode < Node
+      attr_reader :opening_tag, :content, :closing_tag, :location
 
-      def initialize(value:, location:)
-        @value = value
+      def initialize(opening_tag:, content:, closing_tag:, location:)
+        @opening_tag = opening_tag
+        @content = ErbContent.new(value: content)
+
+        @closing_tag = closing_tag
         @location = location
       end
 
       def accept(visitor)
-        visitor.visit_reference(self)
+        visitor.visit_erb(self)
       end
 
       def child_nodes
-        [value]
+        [opening_tag, content, closing_tag].compact
       end
 
       alias deconstruct child_nodes
 
       def deconstruct_keys(keys)
-        { value: value, location: location }
+        {
+          opening_tag: opening_tag,
+          content: content,
+          closing_tag: closing_tag,
+          location: location
+        }
       end
     end
 
-    # An Attribute is a key-value pair within a tag. It contains the key, the
+    class ErbBlock < Node
+      attr_reader :opening_tag, :content, :closing_tag, :location
+
+      def initialize(opening_tag:, content:, closing_tag:, location:)
+        @opening_tag = opening_tag
+        @content = content
+        @closing_tag = closing_tag
+        @location = location
+      end
+
+      def accept(visitor)
+        visitor.visit_erb(self)
+      end
+
+      def child_nodes
+        [opening_tag, content, closing_tag].compact
+      end
+
+      alias deconstruct child_nodes
+
+      def deconstruct_keys(keys)
+        {
+          opening_tag: opening_tag,
+          content: content,
+          closing_tag: closing_tag,
+          location: location
+        }
+      end
+    end
+
+    class ErbControl < Node
+      attr_reader :erb_node
+
+      def initialize(erb_node:)
+        @erb_node = erb_node
+      end
+
+      def location
+        erb_node.location
+      end
+    end
+
+    class ErbIf < ErbControl
+      attr_reader :erb_node
+
+      # [[HtmlNode | ErbNode | CharDataNode]] the child elements
+      attr_reader :elements
+
+      # [nil | ErbElsif | ErbElse] the next clause in the chain
+      attr_reader :consequent
+
+      def initialize(erb_node:, elements:, consequent:)
+        super(erb_node: erb_node)
+        @elements = elements
+        @consequent = consequent
+      end
+
+      def accept(visitor)
+        visitor.visit_erb_if(self)
+      end
+
+      def child_nodes
+        elements
+      end
+
+      alias deconstruct child_nodes
+
+      def deconstruct_keys(keys)
+        {
+          erb_node: erb_node,
+          elements: elements,
+          consequent: consequent,
+          location: location
+        }
+      end
+    end
+
+    class ErbElsif < ErbIf
+      def accept(visitor)
+        visitor.visit_erb_elsif(self)
+      end
+    end
+
+    class ErbElse < ErbIf
+      def accept(visitor)
+        visitor.visit_erb_else(self)
+      end
+    end
+
+    class ErbEnd < Node
+      attr_reader :location
+
+      def initialize(location:)
+        @location = location
+      end
+
+      def accept(visitor)
+        visitor.visit_erb_end(self)
+      end
+
+      def child_nodes
+        []
+      end
+
+      alias deconstruct child_nodes
+
+      def deconstruct_keys(keys)
+        { location: location }
+      end
+    end
+
+    class ErbContent < Node
+      attr_reader(:value, :parsed)
+
+      def initialize(value:)
+        @value = value
+        begin
+          @value = SyntaxTree.parse(@value)
+          @parsed = true
+        rescue SyntaxTree::Parser::ParseError
+          @parsed = false
+        end
+      end
+
+      def accept(visitor)
+        visitor.visit_erb_content(self)
+      end
+
+      def child_nodes
+        []
+      end
+
+      alias deconstruct child_nodes
+
+      def deconstruct_keys(keys)
+        { value: value }
+      end
+    end
+
+    # An HtmlAttribute is a key-value pair within a tag. It contains the key, the
     # equals sign, and the value.
-    class Attribute < Node
+    class HtmlAttribute < Node
       attr_reader :key, :equals, :value, :location
 
       def initialize(key:, equals:, value:, location:)
@@ -359,6 +395,37 @@ module SyntaxTree
       end
     end
 
+    # An ErbString can include ERB-tags
+    class ErbString < Node
+      attr_reader :opening, :contents, :closing, :location
+
+      def initialize(opening:, contents:, closing:, location:)
+        @opening = opening
+        @contents = contents
+        @closing = closing
+        @location = location
+      end
+
+      def accept(visitor)
+        visitor.visit_erb_string(self)
+      end
+
+      def child_nodes
+        [*contents]
+      end
+
+      alias deconstruct child_nodes
+
+      def deconstruct_keys(keys)
+        {
+          opening: opening,
+          contents: contents,
+          closing: closing,
+          location: location
+        }
+      end
+    end
+
     # A CharData contains either plain text or whitespace within an element.
     # It wraps a single token value.
     class CharData < Node
@@ -371,32 +438,6 @@ module SyntaxTree
 
       def accept(visitor)
         visitor.visit_char_data(self)
-      end
-
-      def child_nodes
-        [value]
-      end
-
-      alias deconstruct child_nodes
-
-      def deconstruct_keys(keys)
-        { value: value, location: location }
-      end
-    end
-
-    # A Misc is a catch-all for miscellaneous content outside the root tag of
-    # the XML document. It contains a single token which can be either a
-    # comment, a processing instruction, or whitespace.
-    class Misc < Node
-      attr_reader :value, :location
-
-      def initialize(value:, location:)
-        @value = value
-        @location = location
-      end
-
-      def accept(visitor)
-        visitor.visit_misc(self)
       end
 
       def child_nodes

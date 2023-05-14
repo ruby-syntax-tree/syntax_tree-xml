@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module SyntaxTree
-  module XML
-    VERSION = "0.1.0"
+  module ERB
+    VERSION = "0.0.1"
   end
 end

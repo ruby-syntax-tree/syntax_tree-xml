@@ -1,15 +1,17 @@
 # frozen_string_literal: true
 
 module SyntaxTree
-  module XML
+  module ERB
     # Provides a visitor interface for visiting certain nodes. It's used
     # internally to implement formatting and pretty-printing. It could also be
     # used externally to visit a subset of nodes that are relevant to a certain
     # task.
-    class Visitor
+    class Visitor < SyntaxTree::Visitor
       def visit(node)
         node&.accept(self)
       end
+
+      alias visit_statements visit_child_nodes
 
       private
 
@@ -27,22 +29,13 @@ module SyntaxTree
       # Visit a Document node.
       alias visit_document visit_child_nodes
 
-      # Visit a Prolog node.
-      alias visit_prolog visit_child_nodes
+      # Visit an Html node.
+      alias visit_html visit_child_nodes
 
-      # Visit a Doctype node.
-      alias visit_doctype visit_child_nodes
-
-      # Visit an ExternalID node.
-      alias visit_external_id visit_child_nodes
-
-      # Visit an Element node.
-      alias visit_element visit_child_nodes
-
-      # Visit an Element::OpeningTag node.
+      # Visit an HtmlNode::OpeningTag node.
       alias visit_opening_tag visit_child_nodes
 
-      # Visit an Element::ClosingTag node.
+      # Visit an HtmlNode::ClosingTag node.
       alias visit_closing_tag visit_child_nodes
 
       # Visit a Reference node.
@@ -54,8 +47,11 @@ module SyntaxTree
       # Visit a CharData node.
       alias visit_char_data visit_child_nodes
 
-      # Visit a Misc node.
-      alias visit_misc visit_child_nodes
+      # Visit an ErbNode node.
+      alias visit_erb visit_child_nodes
+
+      # Visit an ErbString node.
+      alias visit_erb_string visit_child_nodes
     end
   end
 end

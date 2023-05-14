@@ -1,75 +1,50 @@
 # SyntaxTree::XML
 
-[![Build Status](https://github.com/ruby-syntax-tree/syntax_tree-xml/actions/workflows/main.yml/badge.svg)](https://github.com/ruby-syntax-tree/syntax_tree-xml/actions/workflows/main.yml)
-[![Gem Version](https://img.shields.io/gem/v/syntax_tree-xml.svg)](https://rubygems.org/gems/syntax_tree-xml)
+[![Build Status](https://github.com/davidwessman/syntax_tree-erb/actions/workflows/main.yml/badge.svg)](https://github.com/davidwessman/syntax_tree-erb/actions/workflows/main.yml)
 
-[Syntax Tree](https://github.com/ruby-syntax-tree/syntax_tree) support for XML.
+[Syntax Tree](https://github.com/ruby-syntax-tree/syntax_tree) support for ERB.
+
+## Work in progress!
+
+This is not ready for production use just yet, still need to work on:
+
+- Comments
+- Blocks using `do`
+- Blank lines
+- Probably more
+
+Currently handles
+
+- ERB tags with and without output
+- ERB tags inside strings
+- HTML tags with attributes
+- HTML tags with and without closing tags
+- ERB `if`, `elsif` and `else` statements
+- Text output
+- Formatting the ruby code inside the ERB tags (using syntax_tree itself)
 
 ## Installation
 
 Add this line to your application's Gemfile:
 
 ```ruby
-gem "syntax_tree-xml"
+gem github: "davidwessman/syntax_tree-erb"
 ```
-
-And then execute:
-
-    $ bundle install
-
-Or install it yourself as:
-
-    $ gem install syntax_tree-xml
 
 ## Usage
 
 From code:
 
 ```ruby
-require "syntax_tree/xml"
+require "syntax_tree/erb"
 
-pp SyntaxTree::XML.parse(source) # print out the AST
-puts SyntaxTree::XML.format(source) # format the AST
-```
-
-From the CLI:
-
-```sh
-$ stree ast --plugins=xml file.xml
-(document
-  (misc "\n"),
-  (element
-    (opening_tag "<", "message", ">"),
-    (char_data "\n" + "  "),
-    (element (opening_tag "<", "hello", ">"), (char_data "Hello"), (closing_tag "</", "hello", ">")),
-    (char_data "\n" + "  "),
-    (element (opening_tag "<", "world", ">"), (char_data "World"), (closing_tag "</", "world", ">")),
-    (char_data "\n"),
-    (closing_tag "</", "message", ">")
-  )
-)
-```
-
-or
-
-```sh
-$ stree format --plugins=xml file.xml
-<message>
-  <hello>Hello</hello>
-  <world>World</world>
-</message>
-```
-
-or
-
-```sh
-$ stree write --plugins=xml file.xml
-file.xml 1ms
+pp SyntaxTree::ERB.parse(source) # print out the AST
+puts SyntaxTree::ERB.format(source) # format the AST
 ```
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/ruby-syntax-tree/syntax_tree-xml.
+Bug reports and pull requests are welcome on GitHub at https://github.com/davidwessman/syntax_tree-erb.
 
 ## License
 
