@@ -12,7 +12,7 @@ require_relative "erb/pretty_print"
 
 module SyntaxTree
   module ERB
-    MAX_WIDTH=80
+    MAX_WIDTH = 80
     def self.format(source, maxwidth = MAX_WIDTH)
       PrettierPrint.format(+"", maxwidth) { |q| parse(source).format(q) }
     end

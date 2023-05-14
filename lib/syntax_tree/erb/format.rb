@@ -32,9 +32,10 @@ module SyntaxTree
           if node.content
             q.indent do
               q.breakable("")
-              q.seplist(node.content, -> { q.breakable(force: true) }) do |child_node|
-                visit(child_node)
-              end
+              q.seplist(
+                node.content,
+                -> { q.breakable(force: true) }
+              ) { |child_node| visit(child_node) }
             end
           end
 
@@ -60,9 +61,10 @@ module SyntaxTree
           if node.elements.any?
             q.indent do
               q.breakable
-              q.seplist(node.elements, -> { q.breakable(force: true) }) do |child_node|
-                visit(child_node)
-              end
+              q.seplist(
+                node.elements,
+                -> { q.breakable(force: true) }
+              ) { |child_node| visit(child_node) }
             end
           end
 
