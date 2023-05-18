@@ -230,32 +230,55 @@ module SyntaxTree
     end
 
     class ErbBlock < Node
-      attr_reader :opening_tag, :content, :closing_tag, :location
+      attr_reader :erb_node, :elements, :consequent, :location
 
-      def initialize(opening_tag:, content:, closing_tag:, location:)
-        @opening_tag = opening_tag
-        @content = content
-        @closing_tag = closing_tag
-        @location = location
+      def initialize(erb_node:, elements:, consequent:)
+        @erb_node = erb_node
+        @elements = elements
+        @consequent = consequent
+        @location = erb_node.location.to(consequent.location)
       end
 
       def accept(visitor)
-        visitor.visit_erb(self)
+        visitor.visit_erb_block(self)
       end
 
       def child_nodes
-        [opening_tag, content, closing_tag].compact
+        [*elements].compact
       end
 
       alias deconstruct child_nodes
 
       def deconstruct_keys(keys)
         {
-          opening_tag: opening_tag,
-          content: content,
-          closing_tag: closing_tag,
+          erb_node: erb_node,
+          elements: elements,
+          consequent: consequent,
           location: location
         }
+      end
+    end
+
+    class ErbDoClose < Node
+      attr_reader :location, :value
+
+      def initialize(location:, value:)
+        @location = location
+        @value = value
+      end
+
+      def accept(visitor)
+        visitor.visit_erb_do_close(self)
+      end
+
+      def child_nodes
+        []
+      end
+
+      alias deconstruct child_nodes
+
+      def deconstruct_keys(keys)
+        { location: location, value: value }
       end
     end
 
@@ -348,7 +371,8 @@ module SyntaxTree
         begin
           @value = SyntaxTree.parse(@value)
           @parsed = true
-        rescue SyntaxTree::Parser::ParseError
+        rescue SyntaxTree::Parser::ParseError => error
+          puts error.message
           @parsed = false
         end
       end
