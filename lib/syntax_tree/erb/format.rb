@@ -47,20 +47,48 @@ module SyntaxTree
       # Visit an ErbNode node.
       def visit_erb(node)
         visit(node.opening_tag)
+
+        q.text(" ")
         visit(node.content)
+        q.text(" ")
+
         visit(node.closing_tag)
+      end
+
+      def visit_erb_block(node)
+        visit(node.erb_node)
+
+        if node.elements.any?
+          q.group do
+            q.indent do
+              q.breakable(force: true)
+              q.seplist(
+                node.elements,
+                -> { q.breakable(force: true) }
+              ) { |child_node| visit(child_node) }
+            end
+          end
+        end
+
+        q.breakable("")
+        visit(node.consequent)
+      end
+
+      def visit_erb_do_close(node)
+        q.text(node.value.rstrip)
+        q.text(" %>")
       end
 
       # Visit an ErbIf node.
       def visit_erb_if(node, key: "if")
         q.group do
-          q.text("<% #{key}")
+          q.text("<% #{key} ")
           visit(node.erb_node.content)
-          q.text("%>")
+          q.text(" %>")
 
           if node.elements.any?
             q.indent do
-              q.breakable
+              q.breakable(force: true)
               q.seplist(
                 node.elements,
                 -> { q.breakable(force: true) }
@@ -106,8 +134,16 @@ module SyntaxTree
             SyntaxTree::Formatter.new("", [], SyntaxTree::ERB::MAX_WIDTH)
           formatter.format(node.value.statements)
           formatter.flush
-          formatted = [" ", *formatter.output, " "].join
-          q.text(formatted)
+
+          rows = formatter.output.join.split("\n")
+
+          if rows.size > 1
+            q.group do
+              q.seplist(rows, -> { q.breakable(" ") }) { |row| q.text(row) }
+            end
+          else
+            q.text(rows.first)
+          end
         end
       end
 

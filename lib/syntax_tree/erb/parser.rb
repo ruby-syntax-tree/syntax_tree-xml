@@ -62,7 +62,7 @@ module SyntaxTree
 
       def parse_any_tag
         atleast do
-          maybe { parse_erb_if } || maybe { parse_erb } ||
+          maybe { parse_erb_if } || maybe { parse_erb_tag } ||
             maybe { parse_html_element } || maybe { parse_chardata }
         end
       end
@@ -146,6 +146,9 @@ module SyntaxTree
               when /\A[\n]+/
                 # whitespace
                 line += $&.count("\n")
+              when /\Ado\s*.*?\s*%>/
+                enum.yield :erb_do_close, $&, index, line
+                state.pop
               when /\A%>/
                 enum.yield :erb_close, $&, index, line
                 state.pop
@@ -310,7 +313,7 @@ module SyntaxTree
         items
       end
 
-      def parse_any_tag_until_erb_keyword
+      def parse_any_tag_after_erb_elsif
         items = []
 
         loop do
@@ -318,7 +321,27 @@ module SyntaxTree
             maybe { parse_erb_elsif } || maybe { parse_erb_else } ||
               maybe { parse_erb_end } || maybe { parse_any_tag }
           items << result
-          break if result.is_a?(ErbControl) || result.is_a?(ErbEnd)
+          if result.is_a?(ErbElsif) || result.is_a?(ErbElse) ||
+               result.is_a?(ErbEnd)
+            break
+          end
+        end
+
+        items
+      end
+
+      def parse_any_tag_after_erb_if
+        items = []
+
+        loop do
+          result =
+            maybe { parse_erb_elsif } || maybe { parse_erb_else } ||
+              maybe { parse_erb_end } || maybe { parse_any_tag }
+          items << result
+          if result.is_a?(ErbElsif) || result.is_a?(ErbElse) ||
+               result.is_a?(ErbEnd)
+            break
+          end
         end
 
         items
@@ -328,7 +351,7 @@ module SyntaxTree
         many do
           atleast do
             maybe { parse_html_element } || maybe { parse_chardata } ||
-              maybe { parse_erb } || maybe { consume(:comment) }
+              maybe { parse_erb_tag } || maybe { consume(:comment) }
           end
         end
       end
@@ -388,16 +411,12 @@ module SyntaxTree
         end
       end
 
-      def parse_erb
-        parse_erb_tag
-      end
-
       def parse_erb_if
         opening_tag = consume(:erb_if_open)
         statement = many { consume(:erb_code) }
         closing_tag = consume(:erb_close)
 
-        contents = parse_any_tag_until_erb_keyword
+        contents = parse_any_tag_after_erb_if
 
         erb_tag = contents.pop
 
@@ -423,7 +442,7 @@ module SyntaxTree
         statement = many { consume(:erb_code) }
         closing_tag = consume(:erb_close)
 
-        contents = parse_any_tag_until_erb_keyword
+        contents = parse_any_tag_after_erb_elsif
 
         erb_tag = contents.pop
 
@@ -471,13 +490,43 @@ module SyntaxTree
       def parse_erb_tag
         opening_tag = consume(:erb_open)
         content = many { consume(:erb_code) }
-        closing_tag = consume(:erb_close)
+        closing_tag =
+          atleast do
+            maybe { consume(:erb_close) } || maybe { parse_erb_do_close }
+          end
 
-        ErbNode.new(
-          opening_tag: opening_tag,
-          content: content.map(&:value).join,
-          closing_tag: closing_tag,
-          location: opening_tag.location.to(closing_tag.location)
+        erb_node =
+          ErbNode.new(
+            opening_tag: opening_tag,
+            content: content.map(&:value).join,
+            closing_tag: closing_tag,
+            location: opening_tag.location.to(closing_tag.location)
+          )
+
+        if closing_tag.is_a?(ErbDoClose)
+          elements = parse_until_erb_end
+          erb_end = elements.pop
+
+          unless erb_end.is_a?(ErbEnd)
+            raise(ErbKeywordError, "Found no matching end-tag for the do-tag")
+          end
+
+          ErbBlock.new(
+            erb_node: erb_node,
+            elements: elements,
+            consequent: erb_end
+          )
+        else
+          erb_node
+        end
+      end
+
+      def parse_erb_do_close
+        token = consume(:erb_do_close)
+
+        ErbDoClose.new(
+          location: token.location,
+          value: token.value.gsub(/%>/, "")
         )
       end
 
@@ -487,7 +536,7 @@ module SyntaxTree
           many do
             atleast do
               maybe { consume(:text) } || maybe { consume(:whitespace) } ||
-                maybe { parse_erb }
+                maybe { parse_erb_tag }
             end
           end
         closing = consume(:string_close)

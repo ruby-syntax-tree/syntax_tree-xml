@@ -51,11 +51,25 @@ module SyntaxTree
         end
       end
 
+      def visit_erb_block(node)
+        q.group do
+          q.text("(erb_block")
+          q.nest(2) do
+            q.breakable
+            q.seplist(node.child_nodes) { |child_node| visit(child_node) }
+          end
+          q.breakable
+          visit(node.consequent)
+          q.breakable("")
+          q.text(")")
+        end
+      end
+
       def visit_erb_if(node, key = "erb_if")
         q.group do
           q.text("(#{key}")
           q.nest(2) do
-            q.breakable
+            q.breakable()
             q.seplist(node.child_nodes) { |child_node| visit(child_node) }
           end
           q.breakable
@@ -74,7 +88,7 @@ module SyntaxTree
       end
 
       def visit_erb_end(node)
-        q.text("(erb_end)")
+        q.text("erb_end")
       end
 
       # Visit an ErbContent node.
