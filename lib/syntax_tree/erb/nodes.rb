@@ -212,7 +212,7 @@ module SyntaxTree
       def initialize(opening_tag:, keyword:, content:, closing_tag:, location:)
         @opening_tag = opening_tag
         @keyword = keyword
-        @content = ErbContent.new(value: content) if content
+        @content = ErbContent.new(value: content.map(&:value).join) if content
         @closing_tag = closing_tag
         @location = location
       end
@@ -268,17 +268,16 @@ module SyntaxTree
       end
     end
 
-    class ErbDoClose < Node
-      attr_reader :location, :value, :closing
+    class ErbClose < Node
+      attr_reader :location, :closing
 
-      def initialize(location:, value:, closing:)
+      def initialize(location:, closing:)
         @location = location
-        @value = value
         @closing = closing
       end
 
       def accept(visitor)
-        visitor.visit_erb_do_close(self)
+        visitor.visit_erb_close(self)
       end
 
       def child_nodes
@@ -288,7 +287,13 @@ module SyntaxTree
       alias deconstruct child_nodes
 
       def deconstruct_keys(keys)
-        { location: location, value: value, closing: closing }
+        { location: location, closing: closing }
+      end
+    end
+
+    class ErbDoClose < ErbClose
+      def accept(visitor)
+        visitor.visit_erb_do_close(self)
       end
     end
 
@@ -417,8 +422,8 @@ module SyntaxTree
       end
     end
 
-    # An ErbString can include ERB-tags
-    class ErbString < Node
+    # A HtmlString can include ERB-tags
+    class HtmlString < Node
       attr_reader :opening, :contents, :closing, :location
 
       def initialize(opening:, contents:, closing:, location:)
@@ -429,7 +434,7 @@ module SyntaxTree
       end
 
       def accept(visitor)
-        visitor.visit_erb_string(self)
+        visitor.visit_html_string(self)
       end
 
       def child_nodes
