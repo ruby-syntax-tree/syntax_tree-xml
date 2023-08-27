@@ -114,6 +114,7 @@ module SyntaxTree
           q.text(" ")
           visit(node.keyword)
         end
+
         node.content.blank? ? q.text(" ") : visit(node.content)
 
         visit(node.closing_tag)
@@ -137,27 +138,25 @@ module SyntaxTree
       end
 
       def visit_erb_content(node)
-        if node.value.is_a?(String)
-          output_rows(node.value.split("\n"))
-        else
-          nodes = node.value&.statements&.child_nodes || []
-          nodes = nodes.reject { |node| node.is_a?(SyntaxTree::VoidStmt) }
+        # Reject all VoidStmt to avoid empty lines
+        nodes =
+          (node.value&.statements&.child_nodes || []).reject do |node|
+            node.is_a?(SyntaxTree::VoidStmt)
+          end
 
-          if nodes.size == 1
-            q.text(" ")
+        if nodes.size == 1
+          q.text(" ")
+          format_statement(nodes.first)
+          q.text(" ")
+        elsif nodes.size > 1
+          q.indent do
+            q.breakable("")
             q.seplist(nodes, -> { q.breakable("") }) do |child_node|
               format_statement(child_node)
             end
-            q.text(" ")
-          elsif nodes.size > 1
-            q.indent do
-              q.breakable("")
-              q.seplist(nodes, -> { q.breakable("") }) do |child_node|
-                format_statement(child_node)
-              end
-            end
-            q.breakable
           end
+
+          q.breakable
         end
       end
 
@@ -341,18 +340,24 @@ module SyntaxTree
       end
 
       def handle_group(nodes, break_after:)
-        return unless nodes.any?
-
-        q.group do
-          nodes.each_with_index do |node, group_index|
-            visit(node)
-            next_node = nodes[group_index + 1]
-            next if next_node.nil?
-            breakable_between_group(node, next_node)
-          end
+        if nodes.size == 1
+          handle_group_nodes(nodes)
+        elsif nodes.size > 1
+          q.group { handle_group_nodes(nodes) }
+        else
+          return
         end
 
         breakable_between_group(nodes.last, nil) if break_after
+      end
+
+      def handle_group_nodes(nodes)
+        nodes.each_with_index do |node, group_index|
+          visit(node)
+          next_node = nodes[group_index + 1]
+          next if next_node.nil?
+          breakable_between_group(node, next_node)
+        end
       end
 
       def node_should_group(node)

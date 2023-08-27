@@ -43,9 +43,10 @@ module SyntaxTree
     end
 
     def test_if_and_end_in_same_tag
-      source = "<% if true then this elsif false then that else maybe end %>"
+      source =
+        "Hello\n<% if true then this elsif false then that else maybe end %>\n<h1>Hey</h1>"
       expected =
-        "<% if true\n  this\nelsif false\n  that\nelse\n  maybe\nend %>\n"
+        "Hello\n<% if true\n  this\nelsif false\n  that\nelse\n  maybe\nend %>\n<h1>Hey</h1>\n"
 
       assert_formatting(source, expected)
     end
@@ -98,10 +99,19 @@ module SyntaxTree
       assert_formatting(source, source)
     end
 
-    def test_erb_only_erb_comment
+    def test_erb_comment
       source = "<%# This should be written on one line %>\n"
 
       assert_formatting(source, source)
+    end
+
+    def test_erb_multiline_comment
+      source =
+        "<%#\n  This is the first\nThis is the second\nThis is the third %>"
+      expected =
+        "<%#\n  This is the first\nThis is the second\nThis is the third %>\n"
+
+      assert_formatting(source, expected)
     end
 
     def test_erb_ternary_as_argument_without_parentheses
