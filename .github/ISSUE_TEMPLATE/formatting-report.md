@@ -8,7 +8,7 @@ assignees: davidwessman
 ---
 
 <details>
-  <summary>ERB-snippet</summary
+  <summary>ERB-snippet</summary>
 
   ```html
   <% code %>
@@ -16,14 +16,14 @@ assignees: davidwessman
 </details>
 
 <details>
-  <summary>Expected formatting</summary
+  <summary>Expected formatting</summary>
 
   ```html
   <% code %>
   ```
 </details>
 <details>
-  <summary>Actual formatting</summary
+  <summary>Actual formatting</summary>
 
   ```html
   <% code %>
